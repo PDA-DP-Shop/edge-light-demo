@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S26 Privacy Simulation</title>
+<title>S26 Privacy Lock</title>
 
 <style>
 body{
@@ -20,6 +20,7 @@ body{
 .content{
     text-align:center;
     z-index:2;
+    position:relative;
 }
 
 .overlay{
@@ -44,49 +45,50 @@ button{
 <body>
 
 <div class="content">
-    <h2>Confidential Content</h2>
-    <p>Tilt phone after activating privacy mode.</p>
-    <button onclick="activatePrivacy()">Activate Privacy Mode</button>
+    <h2 id="secret">Top Secret Message</h2>
+    <p>Only visible from straight front.</p>
+    <button onclick="activatePrivacy()">Activate Privacy</button>
 </div>
 
 <div class="overlay" id="privacyOverlay"></div>
 
 <script>
 let baseGamma = null;
-let privacyActive = false;
+let active = false;
 
 function activatePrivacy(){
 
-    // iOS permission required
     if (typeof DeviceOrientationEvent.requestPermission === 'function') {
         DeviceOrientationEvent.requestPermission()
         .then(response => {
             if (response === 'granted') {
-                startTracking();
+                startPrivacy();
             }
-        }).catch(console.error);
+        });
     } else {
-        startTracking();
+        startPrivacy();
     }
 }
 
-function startTracking(){
-    privacyActive = true;
+function startPrivacy(){
+    active = true;
 
     window.addEventListener("deviceorientation", function(event){
 
-        if(!privacyActive) return;
+        if(!active) return;
 
         if(baseGamma === null){
-            baseGamma = event.gamma; // Save current straight position
+            baseGamma = event.gamma;
         }
 
         let difference = Math.abs(event.gamma - baseGamma);
 
-        let darkness = Math.min(difference * 5, 85);
+        // Strong privacy effect
+        let darkness = Math.min(difference * 8, 100);
 
         document.getElementById("privacyOverlay").style.background =
-            "linear-gradient(to right, rgba(0,0,0," + darkness/100 + "), transparent, rgba(0,0,0," + darkness/100 + "))";
+            "linear-gradient(to right, rgba(0,0,0," + darkness/100 + ") 0%, transparent 40%, transparent 60%, rgba(0,0,0," + darkness/100 + ") 100%)";
+
     });
 }
 </script>
