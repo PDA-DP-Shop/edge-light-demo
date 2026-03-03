@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Privacy Display Simulation</title>
+<title>S26 Privacy Simulation</title>
 
 <style>
 body{
@@ -20,7 +20,6 @@ body{
 .content{
     text-align:center;
     z-index:2;
-    position:relative;
 }
 
 .overlay{
@@ -30,7 +29,7 @@ body{
     width:100%;
     height:100%;
     pointer-events:none;
-    transition:0.2s;
+    transition:0.1s linear;
 }
 button{
     margin-top:20px;
@@ -45,27 +44,50 @@ button{
 <body>
 
 <div class="content">
-    <h2>Confidential Message</h2>
-    <p>This should look private from side angles.</p>
-    <button onclick="enableSensor()">Enable Privacy Sensor</button>
+    <h2>Confidential Content</h2>
+    <p>Tilt phone after activating privacy mode.</p>
+    <button onclick="activatePrivacy()">Activate Privacy Mode</button>
 </div>
 
 <div class="overlay" id="privacyOverlay"></div>
 
 <script>
-function enableSensor(){
-    if (typeof DeviceOrientationEvent !== "undefined") {
-        window.addEventListener("deviceorientation", function(event){
-            let tilt = Math.abs(event.gamma);
+let baseGamma = null;
+let privacyActive = false;
 
-            let darkness = Math.min(tilt * 3, 80);
+function activatePrivacy(){
 
-            document.getElementById("privacyOverlay").style.background =
-                "linear-gradient(to right, rgba(0,0,0," + darkness/100 + "), transparent, rgba(0,0,0," + darkness/100 + "))";
-        });
+    // iOS permission required
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission()
+        .then(response => {
+            if (response === 'granted') {
+                startTracking();
+            }
+        }).catch(console.error);
     } else {
-        alert("Device motion not supported");
+        startTracking();
     }
+}
+
+function startTracking(){
+    privacyActive = true;
+
+    window.addEventListener("deviceorientation", function(event){
+
+        if(!privacyActive) return;
+
+        if(baseGamma === null){
+            baseGamma = event.gamma; // Save current straight position
+        }
+
+        let difference = Math.abs(event.gamma - baseGamma);
+
+        let darkness = Math.min(difference * 5, 85);
+
+        document.getElementById("privacyOverlay").style.background =
+            "linear-gradient(to right, rgba(0,0,0," + darkness/100 + "), transparent, rgba(0,0,0," + darkness/100 + "))";
+    });
 }
 </script>
 
