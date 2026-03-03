@@ -1,97 +1,205 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>S26 Privacy Lock</title>
-
-<style>
-body{
-    margin:0;
-    height:100vh;
-    background:#000;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    font-family:Arial;
-    color:white;
-    overflow:hidden;
-}
-
-.content{
-    text-align:center;
-    z-index:2;
-    position:relative;
-}
-
-.overlay{
-    position:fixed;
-    top:0;
-    left:0;
-    width:100%;
-    height:100%;
-    pointer-events:none;
-    transition:0.1s linear;
-}
-button{
-    margin-top:20px;
-    padding:12px 25px;
-    border:none;
-    border-radius:25px;
-    background:#00f0ff;
-}
-</style>
-</head>
-
-<body>
-
-<div class="content">
-    <h2 id="secret">Top Secret Message</h2>
-    <p>Only visible from straight front.</p>
-    <button onclick="activatePrivacy()">Activate Privacy</button>
-</div>
-
-<div class="overlay" id="privacyOverlay"></div>
-
-<script>
-let baseGamma = null;
-let active = false;
-
-function activatePrivacy(){
-
-    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-        DeviceOrientationEvent.requestPermission()
-        .then(response => {
-            if (response === 'granted') {
-                startPrivacy();
-            }
-        });
-    } else {
-        startPrivacy();
-    }
-}
-
-function startPrivacy(){
-    active = true;
-
-    window.addEventListener("deviceorientation", function(event){
-
-        if(!active) return;
-
-        if(baseGamma === null){
-            baseGamma = event.gamma;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Privacy Display Simulation</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --text-color: #ffffff;
+            --accent-color: #3b82f6;
+            --accent-hover: #2563eb;
         }
 
-        let difference = Math.abs(event.gamma - baseGamma);
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-        // Strong privacy effect
-        let darkness = Math.min(difference * 8, 100);
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+        }
 
-        document.getElementById("privacyOverlay").style.background =
-            "linear-gradient(to right, rgba(0,0,0," + darkness/100 + ") 0%, transparent 40%, transparent 60%, rgba(0,0,0," + darkness/100 + ") 100%)";
+        /* The actual privacy filter overlay */
+        #privacy-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none; /* Ensures clicks pass through to the buttons */
+            z-index: 9999;
+            /* Tiny transition to smooth out raw sensor noise without lagging */
+            transition: background 0.1s ease-out; 
+            background: transparent;
+        }
 
-    });
-}
-</script>
+        .container {
+            text-align: center;
+            padding: 2rem;
+            max-width: 400px;
+            z-index: 10;
+        }
 
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #ff4757;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .confidential-card {
+            background-color: #1e1e1e;
+            border-left: 4px solid #ff4757;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: #d1d5db;
+        }
+
+        .confidential-card p {
+            margin-bottom: 1rem;
+        }
+
+        .confidential-card p:last-child {
+            margin-bottom: 0;
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        #status {
+            margin-top: 1.5rem;
+            font-size: 0.85rem;
+            color: #9ca3af;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="privacy-overlay"></div>
+
+    <div class="container">
+        <h1>Confidential</h1>
+        
+        <div class="confidential-card">
+            <p><strong>Project Apex Details:</strong></p>
+            <p>This information is strictly classified. Ensure no unauthorized personnel are viewing your screen.</p>
+            <p>Financial projections indicate a 400% Q3 growth if the S26 module integration succeeds.</p>
+        </div>
+
+        <button id="activate-btn">Activate Privacy Mode</button>
+        <div id="status">Privacy Mode is Off</div>
+    </div>
+
+    <script>
+        const activateBtn = document.getElementById('activate-btn');
+        const statusText = document.getElementById('status');
+        const overlay = document.getElementById('privacy-overlay');
+
+        let isPrivacyActive = false;
+        let baseGamma = null;
+        
+        // Thresholds
+        const MAX_TILT_ANGLE = 35; // Degrees of tilt required to fully trigger the effect
+
+        activateBtn.addEventListener('click', () => {
+            // iOS 13+ requires explicit permission to access device orientation
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            startPrivacyMode();
+                        } else {
+                            alert("Motion sensors are required for Privacy Mode to work.");
+                        }
+                    })
+                    .catch(console.error);
+            } else {
+                // Non-iOS or older devices
+                startPrivacyMode();
+            }
+        });
+
+        function startPrivacyMode() {
+            if (isPrivacyActive) return;
+            
+            isPrivacyActive = true;
+            baseGamma = null; // Will be set on the first orientation event
+            
+            activateBtn.style.display = 'none';
+            statusText.style.color = '#10b981'; // Green status text
+            statusText.innerText = "Privacy Mode: Active (Sensors Calibrated)";
+
+            window.addEventListener('deviceorientation', handleOrientation, true);
+        }
+
+        function handleOrientation(event) {
+            if (!isPrivacyActive || event.gamma === null) return;
+
+            let gamma = event.gamma; // Left-to-right tilt in degrees [-90, 90]
+
+            // Lock in the base orientation exactly when the user activates it
+            if (baseGamma === null) {
+                baseGamma = gamma;
+            }
+
+            // Calculate how far the phone has tilted from the original center
+            let delta = Math.abs(gamma - baseGamma);
+
+            // Normalize delta to a 0 - 1 scale based on max tilt threshold
+            let intensity = delta / MAX_TILT_ANGLE;
+            if (intensity > 1) intensity = 1;
+
+            // Compute Opacities
+            // Edge darkens quickly, center stays mostly clear until extreme tilt
+            let edgeOpacity = Math.min(intensity * 1.5, 1); 
+            let centerOpacity = intensity > 0.85 ? (intensity - 0.85) * 6.66 : 0; 
+
+            // Create the dynamic gradient
+            let gradient = `linear-gradient(90deg, 
+                rgba(0, 0, 0, ${edgeOpacity}) 0%, 
+                rgba(0, 0, 0, ${edgeOpacity}) 15%, 
+                rgba(0, 0, 0, ${centerOpacity}) 45%, 
+                rgba(0, 0, 0, ${centerOpacity}) 55%, 
+                rgba(0, 0, 0, ${edgeOpacity}) 85%, 
+                rgba(0, 0, 0, ${edgeOpacity}) 100%)`;
+
+            // If tilted beyond the max threshold, apply the nearly full blackout 
+            if (intensity >= 1) {
+                overlay.style.background = `rgba(0, 0, 0, 0.98)`;
+            } else {
+                overlay.style.background = gradient;
+            }
+        }
+    </script>
 </body>
 </html>
